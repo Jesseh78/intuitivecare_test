@@ -43,13 +43,79 @@ Este projeto implementa uma solução completa de **ETL (Extract, Transform, Loa
 
 ##  Setup Rápido
 
-### 1. Clone o repositório
+Você pode executar o projeto de **duas formas**:
+- **Opção A**: Com Docker (recomendado) - tudo containerizado
+- **Opção B**: Desenvolvimento local - API local + DB Docker
+
+---
+
+### Opção A: Setup com Docker (Recomendado)
+
+#### 1. Clone o repositório
 ```bash
 git clone <url-do-repo>
 cd intuitivecare_test
 ```
 
-### 2. Crie e ative o ambiente virtual
+#### 2. Configure as variáveis de ambiente
+```bash
+# Copie o template e edite se necessário
+cp .env.example .env
+
+# Ou no Windows
+copy .env.example .env
+```
+
+#### 3. Inicie todos os serviços (API + DB)
+```bash
+docker-compose up -d
+```
+
+**O que isso faz:**
+- ✅ Cria o banco PostgreSQL na porta **5434**
+- ✅ Builda a imagem da API
+- ✅ Inicia a API na porta **8000**
+- ✅ Configura rede e health checks
+
+#### 4. Verifique se os containers estão rodando
+```bash
+docker ps
+```
+
+Você deve ver:
+```
+CONTAINER ID   IMAGE                    STATUS         PORTS
+abc123         intuitivecare_test-api   Up 30 seconds  0.0.0.0:8000->8000/tcp
+def456         postgres:16              Up 30 seconds  0.0.0.0:5434->5432/tcp
+```
+
+#### 5. Acesse a API
+- **Swagger UI**: http://localhost:8000/docs
+- **Health check**: http://localhost:8000/api/operadoras?limit=1
+
+#### 6. Para parar os serviços
+```bash
+# Parar sem remover containers
+docker-compose stop
+
+# Parar e remover containers
+docker-compose down
+
+# Parar e remover TUDO (incluindo volumes/dados)
+docker-compose down -v
+```
+
+---
+
+### Opção B: Setup Local (Desenvolvimento)
+
+#### 1. Clone o repositório
+```bash
+git clone <url-do-repo>
+cd intuitivecare_test
+```
+
+#### 2. Crie e ative o ambiente virtual
 ```bash
 # Windows PowerShell
 python -m venv .venv
@@ -64,38 +130,47 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3. Instale as dependências
+#### 3. Instale as dependências
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+#### 4. Inicie apenas o banco de dados
+```bash
+docker-compose up -d db
+```
+
+#### 5. Configure a variável de ambiente para localhost
+```bash
+# Windows PowerShell
+$env:DATABASE_URL="postgresql://intuitive:intuitive@localhost:5434/intuitivecare"
+
+# Windows CMD
+set DATABASE_URL=postgresql://intuitive:intuitive@localhost:5434/intuitivecare
+
+# Linux/Mac
+export DATABASE_URL="postgresql://intuitive:intuitive@localhost:5434/intuitivecare"
+```
+
+**Nota**: Use porta **5434** (externa) quando a API roda localmente!
+
 ---
 
 ## 🐘 Configuração do PostgreSQL
 
-### 1. Inicie o banco com Docker Compose
-```bash
-docker-compose up -d
-```
-
-**Configurações do banco**:
-- **Host**: `localhost`
-- **Porta**: `5434` (não 5432, para evitar conflitos)
-- **Usuário**: `intuitive`
-- **Senha**: `intuitive`
-- **Database**: `intuitivecare`
-
-### 2. Verifique se o container está rodando
-```bash
-docker ps
-```
-
-### 3. Teste a conexão
+### Testar conexão com o banco
 ```bash
 # Windows PowerShell
 docker exec -it intuitivecare_pg psql -U intuitive -d intuitivecare -c "SELECT version();"
 ```
+
+**Configurações do banco**:
+- **Host**: `localhost` (API local) ou `db` (API Docker)
+- **Porta**: `5434` (API local) ou `5432` (API Docker)
+- **Usuário**: `intuitive`
+- **Senha**: `intuitive`
+- **Database**: `intuitivecare`
 
 ---
 
@@ -233,7 +308,32 @@ SELECT COUNT(*) FROM despesas_agregadas;
 
 ##  Rodar a API REST
 
-### 1. Configure a variável de ambiente
+### Opção A: API via Docker (já está rodando!)
+
+Se você usou `docker-compose up -d`, a API já está disponível em:
+- **Base URL**: http://localhost:8000
+- **Swagger**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+**Logs da API**:
+```bash
+# Ver logs em tempo real
+docker logs -f intuitivecare_api
+
+# Ver últimas 100 linhas
+docker logs --tail 100 intuitivecare_api
+```
+
+**Rebuild da imagem** (após mudanças no código):
+```bash
+docker-compose up -d --build api
+```
+
+---
+
+### Opção B: API local (desenvolvimento)
+
+#### 1. Configure a variável de ambiente
 ```bash
 # Windows PowerShell
 $env:DATABASE_URL="postgresql://intuitive:intuitive@localhost:5434/intuitivecare"
@@ -245,12 +345,22 @@ set DATABASE_URL=postgresql://intuitive:intuitive@localhost:5434/intuitivecare
 export DATABASE_URL="postgresql://intuitive:intuitive@localhost:5434/intuitivecare"
 ```
 
-### 2. Inicie o servidor
+**Ou crie arquivo `.env`**:
+```bash
+cp .env.example .env
+```
+
+Edite `.env` e ajuste `DATABASE_URL`:
+```
+DATABASE_URL=postgresql://intuitive:intuitive@localhost:5434/intuitivecare
+```
+
+#### 2. Inicie o servidor
 ```bash
 uvicorn src.api.main:app --reload --port 8000
 ```
 
-### 3. Acesse a documentação interativa
+#### 3. Acesse a documentação interativa
 - Swagger UI: **http://localhost:8000/docs**
 - ReDoc: **http://localhost:8000/redoc**
 
@@ -514,7 +624,50 @@ intuitivecare_test/
 
 ## 🔧 Troubleshooting
 
-### Problema 1: **SSL Error ao baixar da ANS**
+### Problema 1: **Container da API não inicia**
+```
+Error: Cannot connect to database
+```
+
+**Solução**: Certifique-se que o DB está rodando e healthy:
+```bash
+docker ps
+
+# Se o DB não estiver UP, reinicie
+docker-compose restart db
+
+# Aguarde o health check
+docker logs intuitivecare_pg | grep "ready to accept connections"
+
+# Reinicie a API
+docker-compose restart api
+```
+
+---
+
+### Problema 2: **Porta 8000 já está em uso**
+```
+Error: address already in use
+```
+
+**Solução**: Mude a porta no `.env`:
+```
+API_PORT=8001
+```
+
+Ou pare o processo que está usando:
+```bash
+# Windows
+netstat -ano | findstr :8000
+taskkill /PID <PID> /F
+
+# Linux/Mac
+lsof -ti:8000 | xargs kill -9
+```
+
+---
+
+### Problema 3: **SSL Error ao baixar da ANS**
 ```
 SSLError: [SSL: CERTIFICATE_VERIFY_FAILED]
 ```
@@ -528,7 +681,7 @@ response = requests.get(url, verify=False)
 
 ---
 
-### Problema 2: **Encoding error ao ler cadastro**
+### Problema 4: **Encoding error ao ler cadastro**
 ```
 UnicodeDecodeError: 'utf-8' codec can't decode byte
 ```
@@ -555,7 +708,7 @@ Ou use `DEFERRABLE` (já configurado no schema).
 
 ---
 
-### Problema 4: **Windows não reconhece variável de ambiente**
+### Problema 7: **Windows não reconhece variável de ambiente**
 ```bash
 # PowerShell
 $env:DATABASE_URL="postgresql://..."
@@ -565,19 +718,15 @@ set DATABASE_URL=postgresql://...
 ```
 
 **Alternativa**: Crie arquivo `.env`:
-```
-DATABASE_URL=postgresql://intuitive:intuitive@localhost:5434/intuitivecare
+```bash
+cp .env.example .env
 ```
 
-E adicione `python-dotenv`:
-```python
-from dotenv import load_dotenv
-load_dotenv()
-```
+E a API lerá automaticamente (com `python-dotenv`).
 
 ---
 
-### Problema 5: **Container PostgreSQL não inicia**
+### Problema 8: **Container PostgreSQL não inicia**
 ```
 Error: port 5434 already in use
 ```
@@ -615,6 +764,32 @@ docker exec -it intuitivecare_pg psql -U intuitive -d intuitivecare -c "SELECT C
 - **FastAPI Docs**: https://fastapi.tiangolo.com/
 - **PostgreSQL COPY**: https://www.postgresql.org/docs/current/sql-copy.html
 - **Pandas Docs**: https://pandas.pydata.org/docs/
+- **Docker Docs**: https://docs.docker.com/
+
+---
+
+##  Arquivos de Configuração
+
+### `.env.example`
+Template com todas as variáveis de ambiente necessárias:
+- `DATABASE_URL`: String de conexão com PostgreSQL
+- `API_PORT`: Porta da API (padrão: 8000)
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`: Credenciais do banco
+- `STATS_CACHE_TTL`: TTL do cache de estatísticas (segundos)
+- `LOG_LEVEL`: Nível de logging (DEBUG, INFO, WARNING, ERROR)
+
+### `.dockerignore`
+Exclui arquivos desnecessários do build:
+- `.venv/`, `__pycache__/`, `.git/`
+- `data/raw/`, `data/reference/` (dados locais não vão pro container)
+- `.md` (exceto README.md)
+
+### `Dockerfile`
+Imagem otimizada para produção:
+- Base: `python:3.11-slim`
+- Health check configurado
+- Dependências compiladas (psycopg)
+- Multi-stage build (apenas runtime)
 
 ---
 
@@ -626,4 +801,4 @@ Este projeto foi desenvolvido para fins de avaliação técnica.
 
 ##  Autor
 
-Desenvolvido por José Ulisses como parte do processo seletivo para Estágio IntuitiveCare 2026 **IntuitiveCare**.
+Desenvolvido como parte do processo seletivo para Engenheiro de Dados na **IntuitiveCare**.

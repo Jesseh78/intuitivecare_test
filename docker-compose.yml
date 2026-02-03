@@ -3,13 +3,50 @@ services:
     image: postgres:16
     container_name: intuitivecare_pg
     environment:
-      POSTGRES_USER: intuitive
-      POSTGRES_PASSWORD: intuitive
-      POSTGRES_DB: intuitivecare
+      POSTGRES_USER: ${POSTGRES_USER:-intuitive}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-intuitive}
+      POSTGRES_DB: ${POSTGRES_DB:-intuitivecare}
     ports:
       - "5434:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - intuitivecare_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U intuitive -d intuitivecare"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: intuitivecare_api
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://intuitive:intuitive@db:5432/intuitivecare}
+      ENV: ${ENV:-development}
+      DEBUG: ${DEBUG:-true}
+      STATS_CACHE_TTL: ${STATS_CACHE_TTL:-300}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - intuitivecare_network
+    restart: unless-stopped
+    volumes:
+      # Mount para desenvolvimento (hot reload)
+      # Comente essas linhas em produção
+      - ./src:/app/src
+      - ./data:/app/data
+
+networks:
+  intuitivecare_network:
+    driver: bridge
 
 volumes:
   pgdata:
