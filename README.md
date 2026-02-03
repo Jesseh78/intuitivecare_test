@@ -541,6 +541,90 @@ htmlcov/index.html
 
 ---
 
+##  Logging e Monitoramento
+
+A API possui logging estruturado para facilitar debug e monitoramento.
+
+### Níveis de log
+
+- **INFO**: Startup, conexão DB, requisições principais
+- **DEBUG**: Detalhes de queries, cache hits
+- **WARNING**: HTTPException (404, 400, etc.)
+- **ERROR**: Exceções não tratadas, erros de banco
+
+### Exemplos de logs
+
+**Startup da API:**
+```
+2026-02-03 10:30:00 - src.api.main - INFO - 🚀 Iniciando API IntuitiveCare...
+2026-02-03 10:30:01 - src.api.db - INFO - Configuração de banco de dados carregada
+2026-02-03 10:30:01 - src.api.main - INFO - ✅ Conectado ao PostgreSQL: PostgreSQL 16.1...
+2026-02-03 10:30:01 - src.api.main - INFO - ✅ API pronta para receber requisições
+```
+
+**Requisições:**
+```
+2026-02-03 10:31:15 - src.api.main - INFO - GET /api/operadoras - page=1, limit=10, q=None
+2026-02-03 10:31:15 - src.api.service - DEBUG - Listagem: 10 operadoras retornadas (total: 150)
+```
+
+**Estatísticas (cache):**
+```
+2026-02-03 10:32:00 - src.api.main - INFO - GET /api/estatisticas - force_refresh=False
+2026-02-03 10:32:00 - src.api.main - INFO - Estatísticas retornadas do cache
+```
+
+**Erros:**
+```
+2026-02-03 10:33:00 - src.api.main - WARNING - HTTPException 404: Operadora com CNPJ 99999999999999 não encontrada - http://localhost:8000/api/operadoras/99999999999999
+```
+
+### Configurar nível de log
+
+**Via variável de ambiente** (`.env`):
+```bash
+LOG_LEVEL=DEBUG  # Para desenvolvimento
+LOG_LEVEL=INFO   # Para produção (padrão)
+```
+
+**Logs do container Docker:**
+```bash
+# Ver logs em tempo real
+docker logs -f intuitivecare_api
+
+# Filtrar por nível
+docker logs intuitivecare_api 2>&1 | grep ERROR
+
+# Últimas 100 linhas
+docker logs --tail 100 intuitivecare_api
+```
+
+### Health check endpoint
+
+A API possui um endpoint `/health` para monitoramento:
+```bash
+curl http://localhost:8000/health
+```
+
+**Resposta (healthy):**
+```json
+{
+  "status": "healthy",
+  "database": "connected"
+}
+```
+
+**Resposta (unhealthy - 503):**
+```json
+{
+  "status": "unhealthy",
+  "database": "disconnected",
+  "error": "connection refused"
+}
+```
+
+---
+
 ##  Estrutura do Projeto
 
 ```
