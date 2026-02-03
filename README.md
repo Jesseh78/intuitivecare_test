@@ -43,6 +43,33 @@ Este projeto implementa uma solução completa de **ETL (Extract, Transform, Loa
 
 ##  Setup Rápido
 
+### 🚀 Setup Automatizado (Recomendado)
+
+Para rodar **tudo** (Pipeline ETL + PostgreSQL + API + Testes) com um único comando:
+
+**Windows (PowerShell):**
+```powershell
+.\setup.ps1
+```
+
+**Linux/Mac:**
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+Este script automatizado irá:
+- ✅ Criar virtual environment e instalar dependências
+- ✅ Iniciar PostgreSQL no Docker (porta 5434)
+- ✅ Executar pipeline ETL completo (Step 1→2→3)
+- ✅ Carregar dados no PostgreSQL
+- ✅ Rodar testes automatizados
+- ✅ Iniciar API REST (porta 8000)
+
+---
+
+### ⚙️ Setup Manual
+
 Você pode executar o projeto de **duas formas**:
 - **Opção A**: Com Docker (recomendado) - tudo containerizado
 - **Opção B**: Desenvolvimento local - API local + DB Docker
