@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    container_name: intuitivecare_pg
+    environment:
+      POSTGRES_USER: intuitive
+      POSTGRES_PASSWORD: intuitive
+      POSTGRES_DB: intuitivecare
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
