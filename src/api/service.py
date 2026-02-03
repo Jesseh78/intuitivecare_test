@@ -172,10 +172,3 @@ def get_estatisticas(force_refresh: bool = False) -> tuple[dict, bool]:
     except Exception as e:
         logger.error(f"Erro ao calcular estatísticas: {e}", exc_info=True)
         raise
-        "media_despesas": float(media),
-        "top5_operadoras": top5,
-        "distribuicao_por_uf": por_uf,
-    }
-    _STATS_CACHE["ts"] = now
-    _STATS_CACHE["payload"] = payload
-    return payload, False

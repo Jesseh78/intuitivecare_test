@@ -5,6 +5,7 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS operadoras_ativas (
   cnpj            CHAR(14) PRIMARY KEY,
+  razao_social    TEXT,
   registro_ans    TEXT,
   modalidade      TEXT,
   uf              CHAR(2)

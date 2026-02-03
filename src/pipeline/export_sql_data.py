@@ -18,6 +18,7 @@ def export_sql_ready_files() -> Path:
     """
     processed = data_dir("processed")
     out_dir = data_dir("sql_data")
+    reference = data_dir("reference")
     ensure_dir(out_dir)
 
     # ---------- (A) cópia do consolidado "puro" do step1 (aderência ao enunciado) ----------
@@ -26,26 +27,43 @@ def export_sql_ready_files() -> Path:
         raw_df = pd.read_csv(raw_cons_path, dtype=str, encoding="utf-8")
         raw_df.to_csv(out_dir / "consolidado_despesas.csv", index=False, encoding="utf-8")
 
-    # ---------- (B) Cadastro de operadoras (preferir o arquivo normalizado do step2) ----------
-    cadastro_norm = processed / "operadoras_ativas_normalizado.csv"
-    if cadastro_norm.exists():
-        cad = pd.read_csv(cadastro_norm, dtype=str, encoding="utf-8")
+    # ---------- (B) Cadastro de operadoras (usar normalizado do step2 como base, enriquecer com referência) ----------
+    # Ler dados de referência (operadoras ativas oficiais)
+    reference_path = reference / "operadoras_ativas.csv"
+    ref_df = pd.read_csv(reference_path, sep=";", dtype=str, encoding="utf-8")
+    # Limpar CNPJ e extrair colunas
+    ref_df["CNPJ"] = ref_df["CNPJ"].str.replace('"', '').str.strip()
+    ref_df["REGISTRO_OPERADORA"] = ref_df["REGISTRO_OPERADORA"].str.replace('"', '').str.strip()
+    ref_df = ref_df[["CNPJ", "Razao_Social", "REGISTRO_OPERADORA"]].copy()
+    ref_df.columns = ["CNPJ", "RazaoSocial_ref", "REGISTRO_OPERADORA"]
+
+    # Ler operadoras ativas normalizado do step2 (base com CNPJs corretos)
+    norm_path = processed / "operadoras_ativas_normalizado.csv"
+    if norm_path.exists():
+        cad = pd.read_csv(norm_path, dtype=str, encoding="utf-8")
+        # Fazer merge com arquivo de referência usando CNPJ como chave
+        cad = cad.merge(ref_df[["CNPJ", "RazaoSocial_ref"]], on="CNPJ", how="left")
+        # Usar razão social do arquivo de referência, se não encontrar, usar "N/D"
+        cad["RazaoSocial"] = cad["RazaoSocial_ref"].fillna("N/D")
+        cad = cad[["CNPJ", "RazaoSocial", "RegistroANS", "Modalidade", "UF"]].copy()
     else:
-        # fallback: tenta derivar do enriquecido (não é o ideal, mas evita quebra)
+        # Fallback: usar enriquecido
         enriched_fallback = pd.read_csv(processed / "consolidado_enriquecido.csv", dtype=str, encoding="utf-8")
-        cad = (
-            enriched_fallback[["CNPJ", "RegistroANS", "Modalidade", "UF"]]
-            .drop_duplicates(subset=["CNPJ"])
-            .copy()
-        )
+        cad = enriched_fallback[["CNPJ", "RegistroANS", "Modalidade", "UF"]].drop_duplicates(subset=["CNPJ"]).copy()
+        cad = cad.merge(ref_df[["CNPJ", "RazaoSocial_ref"]], on="CNPJ", how="left")
+        cad["RazaoSocial"] = cad["RazaoSocial_ref"].fillna("N/D")
+        cad = cad[["CNPJ", "RazaoSocial", "RegistroANS", "Modalidade", "UF"]].copy()
 
     # exporta cadastro em snake_case
-    cad = cad[["CNPJ", "RegistroANS", "Modalidade", "UF"]].copy()
-    cad.columns = ["cnpj", "registro_ans", "modalidade", "uf"]
+    cad.columns = ["cnpj", "razao_social", "registro_ans", "modalidade", "uf"]
     cad.to_csv(out_dir / "operadoras_ativas.csv", index=False, encoding="utf-8")
 
     # ---------- (C) Consolidado enriquecido (SQL) ----------
     enriched = pd.read_csv(processed / "consolidado_enriquecido.csv", dtype=str, encoding="utf-8")
+    # Fazer merge com arquivo de referência para trazer razão social correta
+    enriched = enriched.merge(ref_df, on="CNPJ", how="left")
+    enriched["RazaoSocial"] = enriched["RazaoSocial_ref"].fillna(enriched["RazaoSocial"])
+    
     cons = enriched[
         ["CNPJ", "RazaoSocial", "Trimestre", "Ano", "ValorDespesas",
          "RegistroANS", "Modalidade", "UF"]
