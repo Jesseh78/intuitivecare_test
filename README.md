@@ -477,6 +477,70 @@ curl "http://localhost:8000/api/estatisticas?force=true"
 
 ---
 
+## 🧪 Testes
+
+O projeto inclui **testes unitários e de integração** usando pytest.
+
+### Executar todos os testes
+
+```bash
+# Instale dependências de desenvolvimento
+pip install -r requirements-dev.txt
+
+# Execute todos os testes
+pytest
+
+# Com coverage report
+pytest --cov=src --cov-report=html
+
+# Apenas testes unitários
+pytest tests/test_cnpj.py tests/test_parse_valor.py tests/test_aggregate.py
+
+# Apenas testes de integração (API)
+pytest tests/test_api.py
+```
+
+### Cobertura de testes
+
+Os testes cobrem:
+
+**Unitários** (11 testes):
+- ✅ Validação de CNPJ (válidos, inválidos, formatados)
+- ✅ Normalização de CNPJ (remoção de pontos, barras, etc.)
+- ✅ Parse de valores monetários (formato BR e internacional)
+- ✅ Agregações (total, média, desvio padrão)
+
+**Integração** (9 testes):
+- ✅ GET `/api/operadoras` - retorna 200 com paginação
+- ✅ GET `/api/operadoras?q=` - filtro de busca
+- ✅ GET `/api/operadoras/{cnpj}` - detalhes operadora
+- ✅ GET `/api/operadoras/{cnpj}` - retorna 404 se não existir
+- ✅ GET `/api/operadoras/{cnpj}/despesas` - histórico
+- ✅ GET `/api/estatisticas` - campos obrigatórios
+- ✅ GET `/api/estatisticas?force=true` - força refresh
+- ✅ GET `/docs` - Swagger disponível
+- ✅ GET `/redoc` - ReDoc disponível
+
+### Estrutura de testes
+
+```
+tests/
+├── __init__.py
+├── test_cnpj.py          # Validação e normalização de CNPJ (11 testes)
+├── test_parse_valor.py   # Parse de valores monetários (10 testes)
+├── test_aggregate.py     # Agregações estatísticas (8 testes)
+└── test_api.py           # Testes de integração da API (9 testes)
+```
+
+### Visualizar relatório de coverage
+
+Após executar `pytest --cov`, abra:
+```
+htmlcov/index.html
+```
+
+---
+
 ##  Estrutura do Projeto
 
 ```
@@ -513,8 +577,19 @@ intuitivecare_test/
 │   │
 │   └── cli.py                               # Interface de linha de comando (argparse)
 │
-├── docker-compose.yml                       # PostgreSQL containerizado
-├── requirements.txt                         # Dependências Python
+├── tests/                                   # Testes automatizados (pytest)
+│   ├── test_cnpj.py                         # Validação e normalização de CNPJ
+│   ├── test_parse_valor.py                 # Parse de valores monetários
+│   ├── test_aggregate.py                   # Agregações estatísticas
+│   └── test_api.py                         # Testes de integração da API
+│
+├── .dockerignore                            # Arquivos excluídos do build Docker
+├── .env.example                             # Template de variáveis de ambiente
+├── docker-compose.yml                       # Orquestração (API + PostgreSQL)
+├── Dockerfile                               # Imagem Docker da API
+├── pytest.ini                               # Configuração do pytest
+├── requirements.txt                         # Dependências de produção
+├── requirements-dev.txt                     # Dependências de desenvolvimento
 └── README.md                                # Este arquivo
 ```
 
