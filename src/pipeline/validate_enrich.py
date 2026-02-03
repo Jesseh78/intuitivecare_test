@@ -251,6 +251,11 @@ def validate_and_enrich(
         kind="mergesort",
     )
     cad_best = cad_df_sorted.drop_duplicates(subset=["CNPJ"], keep="first").drop(columns=["__filled"])
+    
+    # Salva um cadastro normalizado (baseado no arquivo original baixado)
+    cadastro_normalizado_csv = processed_dir / "operadoras_ativas_normalizado.csv"
+    cad_best.to_csv(cadastro_normalizado_csv, index=False, encoding="utf-8")
+
 
     # relatório de duplicados (para mostrar “análise crítica”)
     dup_mask = cad_df.duplicated(subset=["CNPJ"], keep=False)
@@ -278,6 +283,6 @@ def validate_and_enrich(
         aggregated_csv=processed_dir / "despesas_agregadas.csv",
         invalid_rows_csv=invalid_rows_csv,
         join_report_csv=join_report_csv,
-        cadastro_csv=cad.csv_path,
+        cadastro_csv=cadastro_normalizado_csv,
     )
     return enriched, out

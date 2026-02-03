@@ -273,3 +273,10 @@ def run_step1_fetch_and_consolidate(base_url: str, out_csv_name: str) -> Path:
         sus.to_csv(processed_dir / "suspeitos_step1.csv", index=False, encoding="utf-8")
 
     return out_csv
+
+    # --- obrigatório do enunciado: compactar consolidado em ZIP ---
+    out_zip = processed_dir / "consolidado_despesas.zip"
+    with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        # Nome interno do arquivo no zip (limpo e previsível)
+        zf.write(out_csv, arcname=out_csv.name)
+
