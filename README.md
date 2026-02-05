@@ -985,6 +985,6 @@ Este projeto foi desenvolvido para fins de avaliação técnica.
 
 ---
 
-##  Autor
+##  Autor José Ulisses
 
-Desenvolvido como parte do processo seletivo para Engenheiro de Dados na **IntuitiveCare**.
+Desenvolvido como parte do processo seletivo para Estagiario na **IntuitiveCare**.
